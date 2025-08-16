@@ -1,0 +1,104 @@
+CREATE DATABASE BloodBankDB;
+USE BloodBankDB;
+
+-- Donor Table
+CREATE TABLE Donor (
+    DonorID INT PRIMARY KEY AUTO_INCREMENT,
+    Name VARCHAR(100) NOT NULL,
+    Age INT CHECK (Age >= 18),
+    Gender ENUM('Male', 'Female', 'Other'),
+    Phone VARCHAR(15) UNIQUE,
+    BloodGroup ENUM('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-') NOT NULL
+);
+
+-- Hospital Table
+CREATE TABLE Hospital (
+    HospitalID INT PRIMARY KEY AUTO_INCREMENT,
+    Name VARCHAR(150) NOT NULL,
+    Address VARCHAR(255),
+    Phone VARCHAR(15) UNIQUE
+);
+
+-- Blood Stock Table
+CREATE TABLE BloodStock (
+    StockID INT PRIMARY KEY AUTO_INCREMENT,
+    BloodGroup ENUM('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'),
+    Quantity INT DEFAULT 0
+);
+
+-- Donation Table
+CREATE TABLE Donation (
+    DonationID INT PRIMARY KEY AUTO_INCREMENT,
+    DonorID INT,
+    HospitalID INT,
+    DonationDate DATE,
+    Quantity INT CHECK (Quantity > 0),
+    FOREIGN KEY (DonorID) REFERENCES Donor(DonorID),
+    FOREIGN KEY (HospitalID) REFERENCES Hospital(HospitalID)
+);
+
+-- Request Table
+CREATE TABLE Request (
+    RequestID INT PRIMARY KEY AUTO_INCREMENT,
+    HospitalID INT,
+    BloodGroup ENUM('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'),
+    Quantity INT,
+    RequestDate DATE,
+    Status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
+    FOREIGN KEY (HospitalID) REFERENCES Hospital(HospitalID)
+);
+
+
+-- Donors
+INSERT INTO Donor (Name, Age, Gender, Phone, BloodGroup) VALUES
+('Ramesh Kumar', 25, 'Male', '9876543210', 'A+'),
+('Priya Sharma', 30, 'Female', '9876543211', 'O+'),
+('Ankit Verma', 22, 'Male', '9876543212', 'B-');
+
+-- Hospitals
+INSERT INTO Hospital (Name, Address, Phone) VALUES
+('City Hospital', 'Pune', '020-2345678'),
+('Global Care', 'Mumbai', '022-1234567');
+
+-- Blood Stock
+INSERT INTO BloodStock (BloodGroup, Quantity) VALUES
+('A+', 10),
+('O+', 15),
+('B-', 5);
+
+-- Donations
+INSERT INTO Donation (DonorID, HospitalID, DonationDate, Quantity) VALUES
+(1, 1, '2025-08-10', 2),
+(2, 2, '2025-08-12', 1);
+
+-- Requests
+INSERT INTO Request (HospitalID, BloodGroup, Quantity, RequestDate, Status) VALUES
+(1, 'A+', 3, '2025-08-15', 'Pending'),
+(2, 'B-', 2, '2025-08-14', 'Approved');
+
+-- 1. Find available stock of each blood group
+SELECT BloodGroup, Quantity FROM BloodStock;
+
+-- 2. List donors who donated in the last 30 days
+SELECT d.Name, dn.DonationDate, dn.Quantity
+FROM Donation dn
+JOIN Donor d ON dn.DonorID = d.DonorID
+WHERE dn.DonationDate >= CURDATE() - INTERVAL 30 DAY;
+
+-- 3. Check pending blood requests
+SELECT r.RequestID, h.Name AS Hospital, r.BloodGroup, r.Quantity, r.RequestDate
+FROM Request r
+JOIN Hospital h ON r.HospitalID = h.HospitalID
+WHERE r.Status = 'Pending';
+
+-- 4. Find total donations by each donor
+SELECT d.Name, COUNT(*) AS TotalDonations, SUM(dn.Quantity) AS TotalUnits
+FROM Donation dn
+JOIN Donor d ON dn.DonorID = d.DonorID
+GROUP BY d.Name;
+
+-- 5. Update stock when a donation is made
+UPDATE BloodStock
+SET Quantity = Quantity + 2
+WHERE BloodGroup = 'A+';
+
